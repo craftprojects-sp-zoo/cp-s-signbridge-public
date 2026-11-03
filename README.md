@@ -215,6 +215,20 @@ tools/          certyfikat testowy do podpisu kodu, generator ikon
 docs/           dokumentacja użytkownika, rejestr zależności
 ```
 
+## Dla współpracowników
+
+* **Stan projektu:** wydanie publiczne 1.1.1 (zob. [CHANGELOG.md](CHANGELOG.md)). To repozytorium wydań; kod pochodzi
+  z repozytorium `cp-signbridge`, a wydania (instalatory) publikuje `craftprojects-sp-zoo/cp-signbridge-official`.
+* **Testy lokalnie (Windows):** `testsun-tests.cmd` — buduje i uruchamia testy x86 i x64 (kilka minut, wymaga
+  Build Tools jak przy budowaniu; część testów wymaga administratora). Wynik: `[+] Testy x86 i x64: OK`.
+* **Bramka autorstwa:** `bash tools/sprawdz-autorstwo.sh` (zasady w [AGENTS.md](AGENTS.md)).
+* **Nowa zależność:** wpis w [docs/compliance/dependency-registry.json](docs/compliance/dependency-registry.json);
+  licencja musi pozwalać na sprzedaż produktu (narzędzia tylko do budowy — oznaczone jako takie).
+* **Sekrety:** nie ma ich w repozytorium (klucze i certyfikaty z kluczem są w `.gitignore`); certyfikat podpisu kodu
+  wskazuje się odciskiem w `SB_SIGN_THUMBPRINT` (zob. „Budowanie ze źródeł”).
+* **Praca:** gałąź na zgłoszenie, zmiana wraca przez pull request; zgłoszenie o błędzie bezpieczeństwa —
+  [SECURITY.md](SECURITY.md). Wydania i decyzje o projekcie należą do Szymona (Prezes Craftprojects).
+
 ## Powiadomienie o nowej wersji
 
 Od wersji 1.1.0 zainstalowany panel SignBridge sam sprawdza, czy na GitHubie jest nowsze wydanie, i pokazuje
