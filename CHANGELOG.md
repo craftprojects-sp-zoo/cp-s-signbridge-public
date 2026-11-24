@@ -2,6 +2,47 @@
 
 Format oparty na [Keep a Changelog](https://keepachangelog.com/pl/1.1.0/); wersje według [SemVer](https://semver.org/lang/pl/).
 
+## [1.2.0] — 2026-11-24
+
+Tryb zgodności ze starszymi programami (CryptoAPI). / *Compatibility mode for older applications (CryptoAPI).*
+
+### Dodano / Added
+
+* Starsze programy, które pobierają klucz podpisu starym sposobem Windows (CryptoAPI), np. Symfonia przy wysyłce JPK,
+  podpisują teraz przez SignBridge. Wcześniej kończyły się błędem „Nie można pobrać klucza prywatnego dla wybranego
+  certyfikatu. Invalid provider type specified.” Na serwerze instaluje się drugi dostawca podpisu (CSP,
+  `cpsignbridge-csp.dll`) — dla programów 64- i 32-bitowych. / *Older applications that get the signing key through
+  the legacy Windows CryptoAPI (e.g. Symfonia when sending JPK files) now sign through SignBridge. Previously they
+  failed with "Invalid provider type specified". A second signing provider (CSP, `cpsignbridge-csp.dll`) is installed
+  on the server — for 64-bit and 32-bit applications.*
+* Ustawienia → „Tryb zgodności ze starszymi programami (CAPI)”: każdy użytkownik serwera włącza go lub wyłącza sam,
+  dla swojego konta, bez administratora. Domyślnie włączony. / *Settings → "Tryb zgodności ze starszymi programami
+  (CAPI)" (compatibility mode): each server user turns it on or off for their own account, without an administrator.
+  On by default.*
+
+### Poprawiono / Fixed
+
+* Powiadomienie o nowej wersji znowu działa. Repozytorium z wydaniami zmieniło nazwę na `cp-s-signbridge-public`,
+  a program pytał pod starym adresem i nie dostawał odpowiedzi. Przycisk „Aktualizuj” prowadzi teraz wprost na nowy
+  adres. / *The new version notification works again. The releases repository was renamed to
+  `cp-s-signbridge-public`, while the program kept asking the old address and got no answer. The "Aktualizuj"
+  (Update) button now opens the new address directly.*
+
+### Aktualizacja z 1.1.1 / Updating from 1.1.1
+
+* Wersje 1.1.0 i 1.1.1 o tym wydaniu same nie powiadomią — 1.2.0 trzeba zainstalować samodzielnie (pobrać ze strony
+  wydań). / *Versions 1.1.0 and 1.1.1 will not notify about this release by themselves — install 1.2.0 manually
+  (download it from the releases page).*
+
+* Po aktualizacji certyfikaty przechodzą w tryb zgodności same, przy najbliższym pobraniu (logowanie, ponowne
+  połączenie albo „Pobierz certyfikaty teraz”). / *After the update certificates switch to compatibility mode by
+  themselves on the next download (sign-in, reconnect or "Pobierz certyfikaty teraz").*
+* Jeśli program, który dotąd podpisywał, po aktualizacji przestanie — wyłącz tryb zgodności w Ustawieniach.
+  Certyfikaty wrócą do poprzedniego dostawcy. / *If an application that used to sign stops working after the update,
+  turn compatibility mode off in Settings. Certificates go back to the previous provider.*
+* Tryb zgodności dotyczy certyfikatów z kluczem RSA. Certyfikaty z kluczem ECDSA działają jak dotąd.
+  / *Compatibility mode applies to certificates with an RSA key. Certificates with an ECDSA key work as before.*
+
 ## [1.1.1] — 2026-10-26
 
 Wydanie poprawkowe: aktualizacja z pobranego instalatora. / *Fix release: updating from a downloaded installer.*

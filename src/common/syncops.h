@@ -6,6 +6,7 @@
 #include <ncrypt.h>
 #include <string>
 #include <vector>
+#include "keyprov.h"
 
 namespace sb { namespace syncops {
 
@@ -16,7 +17,7 @@ struct CertRow {
     std::wstring subject;
     std::wstring issuer;
     std::wstring notAfter;   // yyyy-mm-dd
-    std::wstring source;     // "agent" | "serwer (sync)" | "serwer (sonda)"
+    std::wstring source;     // "agent" | "serwer (sync)" | "serwer (sync, CAPI)" | "serwer (sonda)"
 };
 
 bool IsKspInstalled();
@@ -29,6 +30,10 @@ void ListSyncedCerts(std::vector<CertRow>& rows);
 
 // Pełna synchronizacja. log: linie do pokazania użytkownikowi.
 SECURITY_STATUS Sync(std::vector<std::wstring>& log, int& added, int& removed);
+
+// Przełącznik użytkownika „tryb zgodności (CAPI)”: zapisuje wybór dla bieżącego konta (HKCU) i od razu
+// przestawia pobrane certyfikaty w CurrentUser\My na dostawcę CSP albo KSP. Bez administratora, bez kanału RDP.
+bool SetKeyProviderMode(keyprov::Mode mode, std::vector<std::wstring>& log);
 
 // Usuwa wszystkie certyfikaty z markerem
 int Unsync();

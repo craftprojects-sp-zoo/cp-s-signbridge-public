@@ -285,7 +285,8 @@ int CmdSignTest() {
     hk = 0; spec = 0; freeIt = FALSE;
     if (!CryptAcquireCertificatePrivateKey(cert, 0, NULL, &hk, &spec, &freeIt)) {
         wprintf(L"    [i] Program używający wyłącznie CAPI dostałby błąd: %s\n", Status(GetLastError()).c_str());
-        wprintf(L"        (to oczekiwane — KSP nie ma warstwy CSP; jeśli Optima/Symfonia tak robią, dopiszemy CSP)\n");
+        wprintf(L"        (to oczekiwane — certyfikat sondy jest przypięty tylko do KSP; certyfikaty pobrane z komputera\n"
+                L"         użytkownika w trybie zgodności obsługuje dostawca CAPI: cpsignbridge-csp.dll)\n");
     } else {
         wprintf(L"    [i] Uzyskano uchwyt (spec=%lu) — Windows sam zmostkował do CNG\n", spec);
         if (freeIt) { if (spec == CERT_NCRYPT_KEY_SPEC) NCryptFreeObject(hk); else CryptReleaseContext(hk, 0); }

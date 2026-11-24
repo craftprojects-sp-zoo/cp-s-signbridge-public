@@ -77,7 +77,7 @@ TEST(remove_tree_does_not_follow_junction) {
 
 // S1 + migracja 1.0.0 -> 1.0.1: zdjęcie Modify dla wszystkich, usunięcie starego pkg\ i dowiązań
 TEST(secure_data_dir_migrates_1_0_0) {
-    if (!IsAdmin()) SKIP("wymaga administratora");
+    if (!IsAdmin()) SKIP_ADMIN();
     std::wstring root = t::TempDir(L"acl");
     std::wstring pd = root + L"\\cp-signbridge", logs = pd + L"\\logs", target = root + L"\\cel";
     CreateDirectoryW(target.c_str(), NULL);
@@ -125,7 +125,7 @@ TEST(secure_data_dir_migrates_1_0_0) {
 
 // S1: pakiet tylko dla administratorów; dowiązanie w miejscu katalogu pakietu nie prowadzi poza niego
 TEST(prepare_package_dir_admin_only) {
-    if (!IsAdmin()) SKIP("wymaga administratora");
+    if (!IsAdmin()) SKIP_ADMIN();
     std::wstring root = t::TempDir(L"pkg");
     std::wstring pf = root + L"\\cp-signbridge", pkg = pf + L"\\pkg", target = root + L"\\cel";
     CreateDirectoryW(pf.c_str(), NULL);

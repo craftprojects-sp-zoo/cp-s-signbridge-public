@@ -18,7 +18,8 @@ serwerze i na komputerach pracowników; niepotrzebna część po prostu nie jest
 
 Kreator: **co zostanie zainstalowane** (wybór „ten komputer to: komputer z kartą / serwer” — zapisywany dla całego
 komputera w `HKLM\Software\cp-signbridge\Role`; opcja: skrót na pulpicie) → **instalacja** (postęp, dziennik) → **gotowe**.
-Instalowane: `cpsignbridge.dll` → System32/SysWOW64 + rejestracja dostawcy; wtyczka mstsc w HKLM (wszyscy
+Instalowane: `cpsignbridge.dll` → System32/SysWOW64 + rejestracja dostawcy; `cpsignbridge-csp.dll` → System32/SysWOW64
++ rejestracja dostawcy CryptoAPI dla starszych programów (od 1.2.0); wtyczka mstsc w HKLM (wszyscy
 użytkownicy); program → `C:\Program Files\cp-signbridge\SignBridge.exe`; autostart ikony przy
 zegarze dla każdego użytkownika (HKLM Run); logi `C:\ProgramData\cp-signbridge\logs`; `HKLM\Software\cp-signbridge`
 (Version, InstallDir, InstalledAt) i wpis w „Aplikacje i funkcje” (odinstalowanie `--uninstall`).
@@ -30,6 +31,7 @@ otwiera zainstalowany program; nowsza wersja od razu proponuje aktualizację.
 Zainstalowany program otwiera się jako **panel** w widoku wybranym przy instalacji. **Ustawienia** (przycisk w panelu):
 wybór „ten komputer to: komputer z kartą / serwer” (zapis w HKCU, pierwszeństwo przed rolą z instalacji w HKLM) oraz
 opcja „Pokazuj w panelu przełącznik widoku” — dopiero wtedy u góry panelu pojawiają się dwa przyciski (domyślnie ukryte).
+Trzecia opcja, **„Tryb zgodności ze starszymi programami (CAPI)”**, jest opisana niżej w części o serwerze.
 Przycisk **PROGRAM NIE DZIAŁA?** w nagłówku (także w menu ikony) pokazuje instrukcję krok po kroku dla użytkownika
 (wylogowanie z RDP, ponowne włożenie karty, sprawdzenie w aplikacji karty i w panelu, ustawienia mstsc). „Zainstaluj ponownie” / „Aktualizuj” (gdy instalator jest nowszy) i „Odinstaluj”
 są w panelu.
@@ -58,6 +60,8 @@ Powiadomienia przy zegarze: „Żądanie podpisu” → okno PIN sterownika kart
 1. Skopiuj `SignBridge Installer.exe` na serwer, uruchom (na koncie z prawami administratora).
 2. Kreator: rola **serwer pulpitu zdalnego** → Dalej → **Zainstaluj** → okno UAC. Program:
    * `cpsignbridge.dll` → `System32` i `SysWOW64`, rejestracja dostawcy „SignBridge Key Storage Provider”,
+   * `cpsignbridge-csp.dll` → `System32` i `SysWOW64`, rejestracja dostawcy CryptoAPI „SignBridge Cryptographic Provider”
+     (typ 24; osobno dla programów 64- i 32-bitowych),
    * program → `C:\Program Files\cp-signbridge\SignBridge.exe`,
    * autostart panelu **dla każdego użytkownika** (`HKLM\...\Run`), logi `C:\ProgramData\cp-signbridge\logs`.
 3. Gotowe. Od tej chwili, gdy ktokolwiek loguje się przez RDP, panel w jego sesji **sam** pobiera certyfikaty
@@ -70,6 +74,26 @@ Przyciski w sesji: **Pobierz certyfikaty teraz**, **Test podpisu** (PIN na kompu
 Aktualizacja = uruchomić nowy instalator i kliknąć **Aktualizuj** (pliki w użyciu są podmieniane, stare
 znikają po restarcie). Na komputerach pracowników: nowy instalator → **Zainstaluj na tym komputerze**.
 
+### Tryb zgodności ze starszymi programami (CAPI) — od 1.2.0
+
+Część programów pobiera klucz podpisu starym sposobem Windows (CryptoAPI / CAPI) — np. Symfonia przy wysyłce JPK.
+Taki program nie widzi klucza u dostawcy CNG i kończy się błędem „Nie można pobrać klucza prywatnego dla wybranego
+certyfikatu. Invalid provider type specified.” Dlatego na serwerze jest drugi dostawca, „SignBridge Cryptographic
+Provider” (CSP), a pobrane certyfikaty są domyślnie przypięte do niego.
+
+**Przełącznik:** panel na serwerze → **Ustawienia** → „Tryb zgodności ze starszymi programami (CAPI)”.
+
+* Każdy użytkownik ustawia go sam, dla swojego konta, bez administratora (`HKCU\Software\cp-signbridge`, wartość
+  `KeyProvider`: `csp` albo `ksp`; brak wartości = `csp`).
+* Włączony (domyślnie): certyfikaty RSA są przypięte do dostawcy CAPI. W kolumnie „Skąd” na liście certyfikatów widać
+  „serwer (sync, CAPI)”.
+* Wyłączony: certyfikaty wracają do dostawcy CNG, jak przed wersją 1.2.0 („serwer (sync)”). Wyłącz go, jeśli po
+  aktualizacji jakiś program przestał podpisywać.
+* Zmiana działa od razu i dotyczy tylko certyfikatów pobranych przez SignBridge w magazynie Osobiste tego użytkownika.
+  Program, który już ma otwarty certyfikat, trzeba uruchomić ponownie.
+* Certyfikaty z kluczem ECDSA zostają przy dostawcy CNG w obu ustawieniach (CAPI nie zna ECDSA).
+* W trybie zgodności przycisk **Test podpisu** podpisuje tą samą drogą co starszy program (CryptoAPI).
+
 ## Gdy coś nie działa
 
 | W oknie | Znaczenie |
@@ -77,8 +101,11 @@ znikają po restarcie). Na komputerach pracowników: nowy instalator → **Zains
 | ✘ Certyfikaty z Twojego komputera: brak — nie udało się połączyć z wtyczką | Na PC nie zainstalowano wtyczki, nie zrestartowano mstsc, albo połączenie z Maca / Royal TSX / Windows App (kanał działa tylko w mstsc na Windows) |
 | • Sesja pulpitu zdalnego: nie | Panel przy konsoli serwera (Hyper-V Connect) — nie ma skąd pobrać |
 | ✘ Karta / token: nie widać certyfikatu | Karta wyjęta, aplikacja karty (Sigillum, CloudSigner) nie działa |
+| Program: „Nie można pobrać klucza prywatnego… Invalid provider type specified” | Starszy program (CAPI), a tryb zgodności jest wyłączony albo serwer ma wersję sprzed 1.2.0 — Ustawienia → „Tryb zgodności ze starszymi programami (CAPI)” |
+| Program podpisywał, a po aktualizacji do 1.2.0 przestał | Wyłącz tryb zgodności w Ustawieniach i uruchom program ponownie |
 
-Logi: serwer `C:\ProgramData\cp-signbridge\logs\ksp-*.log` (każdy podpis), komputer użytkownika
+Logi: serwer `C:\ProgramData\cp-signbridge\logs\ksp-*.log` i `csp-*.log` (każdy podpis; `csp-` = programy w trybie
+zgodności CAPI), komputer użytkownika
 `...\logs\agent-mstsc-*.log` (wtyczka). Przycisk **Folder logów** otwiera katalog.
 
 Wiersz poleceń (diagnostyka, w `build\x64\`): `sbctl install|uninstall|sync|test-sign|status`,

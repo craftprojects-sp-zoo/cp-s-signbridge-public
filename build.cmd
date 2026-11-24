@@ -53,8 +53,9 @@ echo ===== biblioteki %1 =====
 call "%VCVARS%" %2 >nul || (echo [!] vcvarsall %2 nieudane & exit /b 1)
 where ninja >nul 2>nul && (set "GEN=Ninja") || (set "GEN=NMake Makefiles")
 cmake -S "%ROOT%." -B "%ROOT%build\%1" -G "!GEN!" -DCMAKE_BUILD_TYPE=Release || exit /b 1
-cmake --build "%ROOT%build\%1" --config Release --target cpsignbridge cpsignbridge-rdp || exit /b 1
+cmake --build "%ROOT%build\%1" --config Release --target cpsignbridge cpsignbridge-csp cpsignbridge-rdp || exit /b 1
 copy /y "%ROOT%build\%1\cpsignbridge.dll" "%ROOT%build\embed\%1-cpsignbridge.dll" >nul || exit /b 1
+copy /y "%ROOT%build\%1\cpsignbridge-csp.dll" "%ROOT%build\embed\%1-cpsignbridge-csp.dll" >nul || exit /b 1
 copy /y "%ROOT%build\%1\cpsignbridge-rdp.dll" "%ROOT%build\embed\%1-cpsignbridge-rdp.dll" >nul || exit /b 1
 endlocal
 exit /b 0

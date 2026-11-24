@@ -2,6 +2,7 @@
 // cp-signbridge — instalacja po stronie serwera (implementacja)
 #include "status.h"
 #include "kspsetup.h"
+#include "keyprov.h"
 #include <bcrypt.h>
 #include <ncrypt.h>
 #include <shlobj.h>
@@ -40,6 +41,7 @@ struct BCryptReg {
 };
 
 const wchar_t* const kDllName = L"cpsignbridge.dll";
+const wchar_t* const kCspRegRoot = L"SOFTWARE\\Microsoft\\Cryptography\\Defaults\\Provider\\";
 const wchar_t* const kRunValue = L"cp-signbridge-panel";
 const wchar_t* const kRunKey = L"Software\\Microsoft\\Windows\\CurrentVersion\\Run";
 
@@ -186,6 +188,23 @@ void RemoveInstallRegistry(HKEY root) {
     RegDeleteKeyExW(root, L"Software\\cp-signbridge", KEY_WOW64_64KEY, 0);
 }
 
+LONG RegisterCsp(const wchar_t* name, const std::wstring& imagePath, bool wow64) {
+    HKEY h;
+    LONG r = RegCreateKeyExW(HKEY_LOCAL_MACHINE, (std::wstring(kCspRegRoot) + name).c_str(), 0, NULL, 0,
+                             KEY_WRITE | (wow64 ? KEY_WOW64_32KEY : KEY_WOW64_64KEY), NULL, &h, NULL);
+    if (r != ERROR_SUCCESS) return r;
+    DWORD type = keyprov::kCspProvType;
+    r = RegSetValueExW(h, L"Image Path", 0, REG_SZ, (const BYTE*)imagePath.c_str(), (DWORD)((imagePath.size() + 1) * sizeof(wchar_t)));
+    if (r == ERROR_SUCCESS) r = RegSetValueExW(h, L"Type", 0, REG_DWORD, (const BYTE*)&type, sizeof(type));
+    RegCloseKey(h);
+    return r;
+}
+
+LONG UnregisterCsp(const wchar_t* name, bool wow64) {
+    LONG r = RegDeleteKeyExW(HKEY_LOCAL_MACHINE, (std::wstring(kCspRegRoot) + name).c_str(), wow64 ? KEY_WOW64_32KEY : KEY_WOW64_64KEY, 0);
+    return r == ERROR_FILE_NOT_FOUND ? ERROR_SUCCESS : r;
+}
+
 bool IsAdmin() {
     BOOL admin = FALSE;
     PSID sid = NULL;
@@ -274,6 +293,18 @@ bool InstallServer(const std::wstring& dir, std::vector<std::wstring>& log, bool
     if (!Replace(src64, dst64, log)) return false;
     if (FileExists(src86)) { if (!Replace(src86, dst86, log)) return false; }
     else log.push_back(L"~ Brak wersji x86 — programy 32-bitowe nie zobaczą dostawcy.");
+    // 1b. DLL dostawcy CAPI (tryb zgodności ze starszymi programami) — obok KSP
+    std::wstring csp64 = dir + L"\\x64\\" + kCspDllName;
+    std::wstring csp86 = dir + L"\\x86\\" + kCspDllName;
+    if (!FileExists(csp64)) csp64 = dir + L"\\" + kCspDllName;
+    std::wstring dstCsp64 = SysDir(false) + L"\\" + kCspDllName;
+    std::wstring dstCsp86 = SysDir(true) + L"\\" + kCspDllName;
+    bool haveCsp = FileExists(csp64), haveCsp86 = haveCsp && FileExists(csp86);
+    if (haveCsp) {
+        if (!Replace(csp64, dstCsp64, log)) return false;
+        if (haveCsp86) { if (!Replace(csp86, dstCsp86, log)) return false; }
+        else log.push_back(L"~ Brak wersji x86 dostawcy CAPI — starsze programy 32-bitowe go nie zobaczą.");
+    } else log.push_back(std::wstring(L"~ Brak ") + kCspDllName + L" w pakiecie — bez trybu zgodności ze starszymi programami (CAPI).");
 
     // 2. Program (panel + sbctl) do Program Files
     std::wstring pf = ProgramDir();
@@ -318,6 +349,14 @@ bool InstallServer(const std::wstring& dir, std::vector<std::wstring>& log, bool
     }
     log.push_back(std::wstring(L"+ Zarejestrowano dostawcę: ") + kProviderName);
 
+    // 4b. Rejestracja dostawcy CAPI: osobno dla programów 64-bitowych i 32-bitowych (WOW6432Node)
+    if (haveCsp) {
+        LONG e = RegisterCsp(keyprov::kCspName, dstCsp64, false);
+        if (e == ERROR_SUCCESS && haveCsp86) e = RegisterCsp(keyprov::kCspName, dstCsp86, true);
+        if (e != ERROR_SUCCESS) { log.push_back(L"! Rejestracja dostawcy CAPI: " + ErrorText(e)); return false; }
+        log.push_back(std::wstring(L"+ Zarejestrowano dostawcę CAPI: ") + keyprov::kCspName + (haveCsp86 ? L" (x64 i x86)" : L" (x64)"));
+    }
+
     // 5. Panel startuje przy logowaniu każdego użytkownika (w sesji RDP sam pobiera certyfikaty)
     std::wstring cmd = L"\"" + pf + L"\\" + kAppExe + L"\" --tray";
     HKEY h;
@@ -331,6 +370,9 @@ bool InstallServer(const std::wstring& dir, std::vector<std::wstring>& log, bool
     if (haveApp && !msiMode) WriteInstallRegistry(HKEY_LOCAL_MACHINE, pf, pf + L"\\" + kAppExe, Version(pf + L"\\" + kAppExe), L"server");
     if (!IsKspRegistered()) { log.push_back(L"! Test otwarcia dostawcy nie powiódł się."); return false; }
     log.push_back(L"+ Test otwarcia dostawcy: OK. Wersja: " + Version(pf + L"\\" + kAppExe));
+    // dostawca CAPI jest dodatkiem: gdy Windows go nie ładuje, certyfikaty zostają przy dostawcy CNG (keyprov::Effective)
+    if (haveCsp) log.push_back(keyprov::IsCspRegistered() ? L"+ Test otwarcia dostawcy CAPI: OK."
+                                                          : L"~ Test otwarcia dostawcy CAPI nie powiódł się — tryb zgodności niedostępny, certyfikaty zostają przy dostawcy CNG.");
     return true;
 }
 
@@ -343,7 +385,11 @@ bool UninstallServer(std::vector<std::wstring>& log, bool msiMode) {
     st = api.Unregister(kProviderName);
     log.push_back(L". UnregisterProvider: " + ErrorText(st));
     for (bool w : { false, true }) {
-        std::wstring p = SysDir(w) + L"\\" + kDllName;
+        LONG e = UnregisterCsp(keyprov::kCspName, w);
+        if (e != ERROR_SUCCESS) log.push_back(std::wstring(L"~ Wyrejestrowanie dostawcy CAPI") + (w ? L" (x86): " : L" (x64): ") + ErrorText(e));
+    }
+    for (const wchar_t* dll : { kDllName, kCspDllName }) for (bool w : { false, true }) {
+        std::wstring p = SysDir(w) + L"\\" + dll;
         if (!FileExists(p)) continue;
         if (DeleteFileW(p.c_str())) log.push_back(L"- " + p);
         else { MoveFileExW(p.c_str(), NULL, MOVEFILE_DELAY_UNTIL_REBOOT); log.push_back(L"~ " + p + L" w użyciu — zniknie po restarcie"); }

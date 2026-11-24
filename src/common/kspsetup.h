@@ -1,6 +1,7 @@
 // SignBridge — © 2026 Craftprojects Sp. z o.o. (craftprojects.pl)
 // cp-signbridge — instalacja po stronie serwera (wymaga administratora):
 //   * cpsignbridge.dll -> System32 / SysWOW64, rejestracja dostawcy (KSP) w CNG
+//   * cpsignbridge-csp.dll -> System32 / SysWOW64, rejestracja dostawcy CAPI (CSP) dla programów 64- i 32-bitowych
 //   * sbpanel.exe, sbctl.exe -> %ProgramFiles%\cp-signbridge
 //   * autostart panelu dla wszystkich użytkowników (HKLM\...\Run) — panel w sesji RDP
 //     sam pobiera certyfikaty z komputera użytkownika
@@ -18,6 +19,9 @@ namespace sb { namespace kspsetup {
 const wchar_t* const kProviderName = L"SignBridge Key Storage Provider";
 // nazwa zainstalowanego programu (plik dystrybucyjny nazywa się "... Installer.exe", po instalacji — tak)
 const wchar_t* const kAppExe = L"SignBridge.exe";
+
+// biblioteka dostawcy CAPI (CSP) — tryb zgodności ze starszymi programami; nazwa dostawcy: keyprov::kCspName
+const wchar_t* const kCspDllName = L"cpsignbridge-csp.dll";
 
 bool IsAdmin();
 bool IsKspRegistered();                 // NCryptOpenStorageProvider działa
@@ -37,6 +41,11 @@ bool SecureDataDir(const std::wstring& pd, std::vector<std::wstring>& log);
 // fromDir: katalog pakietu (kAppExe, x64\, x86\; opcjonalnie sbctl.exe). log: kolejne komunikaty.
 // msiMode=true (wywołanie z pakietu MSI): program już leży w ProgramDir i wpis w „Aplikacje i funkcje” robi MSI
 bool InstallServer(const std::wstring& fromDir, std::vector<std::wstring>& log, bool msiMode = false);
+
+// Rejestracja dostawcy CAPI: HKLM\SOFTWARE\Microsoft\Cryptography\Defaults\Provider\<nazwa> (Image Path, Type = 24).
+// wow64=true: widok 32-bitowy rejestru (WOW6432Node) — tam szukają programy 32-bitowe. Zwraca kod błędu Win32 (0 = OK).
+LONG RegisterCsp(const wchar_t* name, const std::wstring& imagePath, bool wow64);
+LONG UnregisterCsp(const wchar_t* name, bool wow64);
 
 // Wpis w „Aplikacje i funkcje” + Software\cp-signbridge (Version, InstallDir, InstalledAt). root: HKLM (serwer) / HKCU (komputer)
 void WriteInstallRegistry(HKEY root, const std::wstring& installDir, const std::wstring& exePath, const std::wstring& version, const wchar_t* role);

@@ -13,6 +13,8 @@ IDR_KSP_X64 RCDATA "x64-cpsignbridge.dll"
 IDR_KSP_X86 RCDATA "x86-cpsignbridge.dll"
 IDR_RDP_X64 RCDATA "x64-cpsignbridge-rdp.dll"
 IDR_RDP_X86 RCDATA "x86-cpsignbridge-rdp.dll"
+IDR_CSP_X64 RCDATA "x64-cpsignbridge-csp.dll"
+IDR_CSP_X86 RCDATA "x86-cpsignbridge-csp.dll"
 
 VS_VERSION_INFO VERSIONINFO
  FILEVERSION SB_VERSION_NUM

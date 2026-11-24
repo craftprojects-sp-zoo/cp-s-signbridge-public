@@ -102,6 +102,7 @@ enum Ctl { ID_FIRST = 1000,
            ID_STATUS, ID_LIST, ID_LOG, ID_LOGLBL, ID_LINK, ID_FOOTER_ICON, ID_TAB_WS, ID_TAB_SRV, ID_ROLE_HINT,
            ID_BTN_SYNC, ID_BTN_TEST, ID_BTN_UNSYNC, ID_BTN_REFRESH, ID_BTN_LOGS, ID_BTN_SETUP, ID_BTN_UPDATE, ID_BTN_UNINSTALL, ID_CHK_AUTOSTART,
            ID_UPD_LBL, ID_BTN_UPD_OPEN, ID_BTN_UPD_LATER,
+           ID_CHK_CAPI,   // ustawienia: tryb zgodności ze starszymi programami (dostawca CAPI)
            // ikona
            ID_TRAY_SHOW = 2001, ID_TRAY_REFRESH, ID_TRAY_SYNC, ID_TRAY_ROLE_WS, ID_TRAY_ROLE_SRV, ID_TRAY_INFO, ID_TRAY_CARD, ID_TRAY_HELP, ID_TRAY_MANUAL, ID_TRAY_EXIT, ID_TRAY_UPDATE };
 
@@ -117,7 +118,7 @@ HWND g_wnd;
 HWND g_cardWs, g_cardSrv, g_btnNext, g_btnBack, g_btnCancel, g_summary, g_chkShortcut, g_btnInstall, g_progress, g_doneTitle, g_doneText, g_btnOpenPanel, g_btnClose, g_step;
 HWND g_status, g_list, g_log, g_logLbl, g_link, g_footerIcon, g_tabWs, g_tabSrv;
 HWND g_radWs, g_radSrv, g_btnHelp, g_helpText;
-HWND g_btnSettings, g_chkTabs, g_radWs2, g_radSrv2, g_viewLbl, g_chkDelSelf, g_btnManual, g_manualText;
+HWND g_btnSettings, g_chkTabs, g_chkCapi, g_radWs2, g_radSrv2, g_viewLbl, g_chkDelSelf, g_btnManual, g_manualText;
 bool g_showTabs = false;   // przełącznik widoku (dwie zakładki) widoczny w panelu — Ustawienia
 HWND g_btnSync, g_btnTest, g_btnUnsync, g_btnRefresh, g_btnLogs, g_btnSetup, g_btnUpdate, g_btnUninstall, g_chkAutostart;
 HWND g_updLbl, g_btnUpdOpen, g_btnUpdLater;   // „Dostępna wersja X.Y.Z” (CP-SB-19)
@@ -254,6 +255,8 @@ bool ExtractPackage(const std::wstring& dir, std::wstring& err) {
     CreateDirectoryW((dir + L"\\x86").c_str(), NULL);
     if (!ExtractRes(IDR_KSP_X64, dir + L"\\x64\\cpsignbridge.dll", err)) return false;
     if (!ExtractRes(IDR_KSP_X86, dir + L"\\x86\\cpsignbridge.dll", err)) return false;
+    if (!ExtractRes(IDR_CSP_X64, dir + L"\\x64\\cpsignbridge-csp.dll", err)) return false;
+    if (!ExtractRes(IDR_CSP_X86, dir + L"\\x86\\cpsignbridge-csp.dll", err)) return false;
     if (!ExtractRes(IDR_RDP_X64, dir + L"\\x64\\cpsignbridge-rdp.dll", err)) return false;
     if (!ExtractRes(IDR_RDP_X86, dir + L"\\x86\\cpsignbridge-rdp.dll", err)) return false;
     if (!CopyExeTo(dir + L"\\" + sb::kspsetup::kAppExe)) { err = L"Nie można skopiować programu do " + dir; return false; }
@@ -457,7 +460,10 @@ void BuildUi() {
     Label(PG_SETTINGS, L"Decyduje, co pokazuje panel i ikona przy zegarze. Zapisywane dla Twojego konta.", 0, 60, HEADER_H + 164, cw - 100, 22, g_fontSmall);
     g_chkTabs = Make(PG_SETTINGS, L"BUTTON", L"Pokazuj w panelu przełącznik widoku (dwa przyciski: komputer z kartą / serwer)", ID_CHK_TABS, 40, HEADER_H + 210, cw - 80, 24, BS_AUTOCHECKBOX | WS_TABSTOP);
     Label(PG_SETTINGS, L"Domyślnie ukryty — zwykły użytkownik nie musi go widzieć.", 0, 60, HEADER_H + 236, cw - 100, 22, g_fontSmall);
-    Btn(PG_SETTINGS, L"Wstecz", ID_BTN_SET_BACK, cw - 40 - 120, HEADER_H + 300, 120, 1);
+    // przełącznik dostawcy dla certyfikatów tego użytkownika na serwerze: CSP (CAPI) albo KSP (CNG) — docs/decisions/D-0001
+    g_chkCapi = Make(PG_SETTINGS, L"BUTTON", L"Tryb zgodności ze starszymi programami (CAPI), np. Symfonia — na serwerze, tylko dla Twojego konta", ID_CHK_CAPI, 40, HEADER_H + 276, cw - 80, 24, BS_AUTOCHECKBOX | WS_TABSTOP);
+    Label(PG_SETTINGS, L"Domyślnie włączony: Twoje certyfikaty widzą także programy podpisujące starszym sposobem. Wyłącz, jeśli po aktualizacji jakiś program przestał podpisywać — certyfikaty wrócą do dostawcy CNG, jak przed wersją 1.2. Zmiana działa od razu.", 0, 60, HEADER_H + 302, cw - 100, 40, g_fontSmall);
+    Btn(PG_SETTINGS, L"Wstecz", ID_BTN_SET_BACK, cw - 40 - 120, HEADER_H + 360, 120, 1);
 
     // --- strona: instrukcja obsługi ---
     Label(PG_MANUAL, L"Instrukcja obsługi", ID_STEP + 700, 40, HEADER_H + 24, cw - 80, 36, g_fontBig);
@@ -481,6 +487,7 @@ void BuildUi() {
         L"•  Dla administratora: logi w C:\\ProgramData\\cp-signbridge\\logs (przycisk „Folder logów”).\r\n\r\n"
         L"USTAWIENIA\r\n"
         L"•  „Ten komputer to…” — wybór widoku: komputer z kartą albo serwer. „Pokazuj przełącznik widoku” wyświetla w panelu dwa przyciski do szybkiej zmiany.\r\n"
+        L"•  „Tryb zgodności ze starszymi programami (CAPI)” — na serwerze, dla Twojego konta, domyślnie włączony. Dzięki niemu podpisują także programy używające starszego sposobu (np. Symfonia). Gdyby po aktualizacji jakiś program przestał podpisywać, wyłącz go — certyfikaty wrócą do poprzedniego dostawcy.\r\n"
         L"•  Nowa wersja: raz na dobę program sprawdza na GitHubie (zwykłe zapytanie HTTPS: adres IP, wersja programu), czy jest nowsze wydanie, i pokazuje „Dostępna wersja …”. „Aktualizuj” otwiera stronę wydań w przeglądarce — program sam niczego nie pobiera ani nie instaluje. Administrator może to wyłączyć zasadą grupy (DisableUpdateCheck).\r\n"
         L"•  Poza tym program nie łączy się z internetem. Odinstalowanie: „Aplikacje i funkcje” lub przycisk „Odinstaluj” w panelu — nie zostawia śladów.\r\n\r\n"
         L"SignBridge — Craftprojects Sp. z o.o. · craftprojects.pl");
@@ -655,9 +662,8 @@ void SetBusy(bool busy) {
 // Śledzenie logów (zdarzenia + powiadomienia o podpisach)
 // ---------------------------------------------------------------------------
 
-void TailLogs(bool initial) {
-    std::wstring dir = LogsDir();
-    std::wstring pattern = dir + (g_role == ROLE_SERVER ? L"\\ksp-*.log" : L"\\agent-*.log");
+void TailLogFiles(const std::wstring& dir, const wchar_t* mask, bool initial) {
+    std::wstring pattern = dir + mask;
     WIN32_FIND_DATAW fd;
     HANDLE h = FindFirstFileW(pattern.c_str(), &fd);
     if (h == INVALID_HANDLE_VALUE) return;
@@ -707,6 +713,13 @@ void TailLogs(bool initial) {
         }
     } while (FindNextFileW(h, &fd));
     FindClose(h);
+}
+
+void TailLogs(bool initial) {
+    std::wstring dir = LogsDir();
+    if (g_role != ROLE_SERVER) { TailLogFiles(dir, L"\\agent-*.log", initial); return; }
+    TailLogFiles(dir, L"\\ksp-*.log", initial);
+    TailLogFiles(dir, L"\\csp-*.log", initial);   // dostawca CAPI (tryb zgodności) pisze własny log, w tym samym formacie
 }
 
 // ---------------------------------------------------------------------------
@@ -1125,10 +1138,26 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp) {
             SendMessageW(g_radWs2, BM_SETCHECK, g_role == ROLE_WORKSTATION ? BST_CHECKED : BST_UNCHECKED, 0);
             SendMessageW(g_radSrv2, BM_SETCHECK, g_role == ROLE_SERVER ? BST_CHECKED : BST_UNCHECKED, 0);
             SendMessageW(g_chkTabs, BM_SETCHECK, g_showTabs ? BST_CHECKED : BST_UNCHECKED, 0);
+            SendMessageW(g_chkCapi, BM_SETCHECK, sb::keyprov::ReadMode() == sb::keyprov::Mode::Csp ? BST_CHECKED : BST_UNCHECKED, 0);
+            EnableWindow(g_chkCapi, g_ksp);   // dotyczy tylko serwera z zainstalowanym dostawcą
             ShowPage(PG_SETTINGS); return 0;
         case ID_RAD_WS2: if (g_role != ROLE_WORKSTATION) SetRole(ROLE_WORKSTATION, true); return 0;
         case ID_RAD_SRV2: if (g_role != ROLE_SERVER) SetRole(ROLE_SERVER, true); return 0;
         case ID_CHK_TABS: g_showTabs = SendMessageW(g_chkTabs, BM_GETCHECK, 0, 0) == BST_CHECKED; WriteCfg(L"ShowRoleTabs", g_showTabs ? L"1" : L"0"); return 0;
+        case ID_CHK_CAPI: {
+            bool on = SendMessageW(g_chkCapi, BM_GETCHECK, 0, 0) == BST_CHECKED;
+            if (g_busy) {
+                // trwa np. pobieranie certyfikatów — nie przestawiamy powiązań w połowie tamtej operacji
+                SendMessageW(g_chkCapi, BM_SETCHECK, on ? BST_UNCHECKED : BST_CHECKED, 0);
+                MessageBoxW(hwnd, L"Trwa inna operacja (np. pobieranie certyfikatów). Spróbuj ponownie za chwilę.", kTitle, MB_OK | MB_ICONINFORMATION);
+                return 0;
+            }
+            std::vector<std::wstring> lines;
+            bool ok = sb::syncops::SetKeyProviderMode(on ? sb::keyprov::Mode::Csp : sb::keyprov::Mode::Ksp, lines);
+            for (auto& l : lines) Note((ok ? L"" : L"[!] ") + l);
+            if (!ok) SendMessageW(g_chkCapi, BM_SETCHECK, on ? BST_UNCHECKED : BST_CHECKED, 0);
+            return 0;
+        }
         case ID_BTN_SET_BACK: GoPanel(); return 0;
         case ID_BTN_HELP_LOGS: CreateDirectoryW(LogsDir().c_str(), NULL); ShellExecuteW(NULL, L"open", LogsDir().c_str(), NULL, NULL, SW_SHOW); return 0;
         case ID_TAB_WS: if (g_role != ROLE_WORKSTATION) { SetRole(ROLE_WORKSTATION, true); GoPanel(); } return 0;
