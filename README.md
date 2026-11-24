@@ -13,7 +13,7 @@
 </p>
 
 <p align="center">
-  <img alt="Wersja 1.1.1" src="https://img.shields.io/badge/wersja-1.1.1-2563eb">
+  <img alt="Wersja 1.2.0" src="https://img.shields.io/badge/wersja-1.2.0-2563eb">
   <img alt="Licencja MIT" src="https://img.shields.io/badge/licencja-MIT-16a34a">
   <img alt="Windows" src="https://img.shields.io/badge/platforma-Windows%2010%20%7C%2011%20%7C%20Server-0078d4">
   <img alt="Bez telemetrii" src="https://img.shields.io/badge/telemetria-brak-6b7280">
@@ -69,6 +69,9 @@ Program jest **bezpłatny i otwarty** (licencja MIT).
 2. **Na komputerze użytkownika** wtyczka klienta pulpitu zdalnego (mstsc) prosi lokalny Windows o podpis kartą
    — PIN wpisuje się w oknie sterownika karty — i odsyła podpis.
 3. **Kanał** to wirtualny kanał tej samej, szyfrowanej sesji RDP. Bez portów, adresów i reguł zapory.
+4. **Starsze programy** (od 1.2.0), które pobierają klucz starym sposobem Windows (CryptoAPI — np. Symfonia
+   przy wysyłce JPK), obsługuje drugi dostawca na serwerze (CSP). To „tryb zgodności”, domyślnie włączony; każdy
+   użytkownik może go wyłączyć dla siebie w Ustawieniach panelu ([docs/PANEL.md](docs/PANEL.md)).
 
 Klucz prywatny nigdy nie opuszcza karty, a PIN nie jest przesyłany ani zapisywany (wymóg wyłącznej kontroli — eIDAS).
 Obsługiwane: RSA i ECDSA, SHA-256/384/512; każda karta, token lub podpis chmurowy działający lokalnie w Windows.
@@ -91,10 +94,10 @@ Kanał działa w kliencie mstsc na Windows; inne klienty RDP (macOS, aplikacje p
 | Plik | Zastosowanie |
 |---|---|
 | `SignBridge.Installer.exe` | kreator instalacji — ten sam plik na serwer i na komputery z kartą |
-| `SignBridge-1.1.1.zip` | ten sam program spakowany (gdy przeglądarka lub poczta blokuje `.exe`); w środku `SignBridge Installer.exe` |
+| `SignBridge-1.2.0.zip` | ten sam program spakowany (gdy przeglądarka lub poczta blokuje `.exe`); w środku `SignBridge Installer.exe` |
 | `SignBridge.msi` | instalacja cicha przez GPO / Intune: `msiexec /i "SignBridge.msi" /qn` |
 | `Craftprojects-CodeSigning.cer` | publiczny certyfikat wydawcy (zob. weryfikacja, pkt 3) |
-| `SignBridge-1.1.1-zrodla.zip` | dokładnie te źródła, z których zbudowano wydanie |
+| `SignBridge-1.2.0-zrodla.zip` | dokładnie te źródła, z których zbudowano wydanie |
 | `SHA256SUMS.txt` | sumy kontrolne SHA-256 powyższych plików |
 
 GitHub zamienia spację w nazwie pliku na kropkę, dlatego pobrany instalator nazywa się `SignBridge.Installer.exe`,
@@ -105,7 +108,8 @@ z [dokumentacji](docs/instruction-msi.md) użyj nazwy pliku, który masz.
 zamyka działający program w swojej sesji (także 1.1.0). Pakiet MSI od 1.1.1 sam zamyka działający SignBridge we wszystkich
 sesjach (także na serwerze RDS) i nie wymaga restartu. Przy przejściu z 1.1.0 na MSI zalecamy wcześniej zamknąć
 program (menu ikony przy zegarze → **Zakończ**) — 1.1.0 nie reaguje na prośbę o zamknięcie, więc pakiet kończy go
-dopiero po kilku sekundach.
+dopiero po kilku sekundach. Po aktualizacji do 1.2.0 certyfikaty przechodzą w tryb zgodności same, przy najbliższym
+pobraniu; jeśli program, który dotąd podpisywał, przestanie — wyłącz tryb zgodności w Ustawieniach panelu.
 
 Szczegóły: [docs/PANEL.md](docs/PANEL.md) (instalacja i obsługa) oraz [docs/instruction-msi.md](docs/instruction-msi.md)
 (MSI i wiersz poleceń).
@@ -160,7 +164,7 @@ i zgłoś to (zob. [SECURITY.md](SECURITY.md)).
 > Foundation — sposób weryfikacji zostanie wtedy opisany w notach wydania. Zasady podpisywania (co jest podpisywane,
 > kto zatwierdza wydania, prywatność): **[CODE_SIGNING_POLICY.md](CODE_SIGNING_POLICY.md)**.
 
-Plik `SignBridge-1.1.1.zip` zawiera `SignBridge Installer.exe` — sprawdź sumę samego ZIP-a, a podpis i odcisk
+Plik `SignBridge-1.2.0.zip` zawiera `SignBridge Installer.exe` — sprawdź sumę samego ZIP-a, a podpis i odcisk
 rozpakowanego pliku tak jak wyżej.
 
 ## Budowanie ze źródeł (Windows)
@@ -169,7 +173,7 @@ Build wymaga Windows (MSVC, Windows SDK, zasoby `.rc`); na macOS / Linux nie da 
 
 1. Zainstaluj **[Build Tools for Visual Studio 2026](https://visualstudio.microsoft.com/visual-cpp-build-tools/)**
    (wersja 18) z obciążeniem **„Desktop development with C++”** oraz komponentami **„C++ CMake tools for Windows”**
-   (zawiera CMake ≥ 3.20 i Ninja) i **Windows SDK** (wydania 1.0.0–1.1.1 zbudowano z MSVC 19.51 i Windows SDK 10.0.28000).
+   (zawiera CMake ≥ 3.20 i Ninja) i **Windows SDK** (wydania 1.0.0–1.2.0 zbudowano z MSVC 19.51 i Windows SDK 10.0.28000).
 2. *(Opcjonalnie, dla pakietu MSI)* zainstaluj [.NET SDK](https://dotnet.microsoft.com/download), a potem WiX 5:
    ```
    dotnet tool install --global wix --version 5.0.2
@@ -205,6 +209,7 @@ Wersję zmienia się w jednym miejscu: `src/panel/resource.h` (`SB_VERSION_*`).
 
 ```
 src/ksp/        dostawca kluczy CNG (cpsignbridge.dll) — serwer
+src/csp/        dostawca CryptoAPI dla starszych programów (cpsignbridge-csp.dll) — serwer
 src/rdpplugin/  wtyczka mstsc (cpsignbridge-rdp.dll) — komputer użytkownika
 src/panel/      SignBridge.exe — kreator, panel, ikona przy zegarze; zasoby w res/ i resource.h
 src/sbctl/      narzędzie diagnostyczne (serwer)
@@ -331,6 +336,9 @@ SignBridge bypasses smart-card redirection entirely. It is **free and open sourc
 2. **On the user's PC** a plug-in for the Remote Desktop client (mstsc) asks local Windows to sign with the card —
    the PIN is entered in the card driver's own dialog — and returns the signature.
 3. **The channel** is an RDP dynamic virtual channel inside the same encrypted session: no ports, addresses or firewall rules.
+4. **Older applications** (since 1.2.0) that get the key through the legacy Windows CryptoAPI (e.g. Symfonia when
+   sending JPK files) are served by a second provider on the server (CSP). This "compatibility mode" is on by default;
+   each user can turn it off for their own account in the panel settings.
 
 The private key never leaves the card and the PIN is never transmitted or stored. RSA and ECDSA, SHA-256/384/512.
 
@@ -343,9 +351,9 @@ The private key never leaves the card and the PIN is never transmitted or stored
 ### Install
 
 **[Download the latest release](https://github.com/craftprojects-sp-zoo/cp-signbridge-official/releases/latest)**
-(all releases: **[Releases](../../releases)**): `SignBridge.Installer.exe`, the ZIP (`SignBridge-1.1.1.zip`, for when
+(all releases: **[Releases](../../releases)**): `SignBridge.Installer.exe`, the ZIP (`SignBridge-1.2.0.zip`, for when
 `.exe` downloads are blocked) or `SignBridge.msi`, plus `Craftprojects-CodeSigning.cer`, the exact build sources
-(`SignBridge-1.1.1-zrodla.zip`) and `SHA256SUMS.txt`. Run the same installer on the server and on user PCs
+(`SignBridge-1.2.0-zrodla.zip`) and `SHA256SUMS.txt`. Run the same installer on the server and on user PCs
 (`msiexec /i "SignBridge.msi" /qn` for silent deployment).
 
 GitHub replaces the space in the file name with a dot, so the downloaded installer is `SignBridge.Installer.exe`,
@@ -356,7 +364,8 @@ you have in the commands from the documentation.
 running program in its own session (1.1.0 too). Since 1.1.1 the MSI closes the running SignBridge in all sessions
 (including RDS servers) without a restart. When upgrading from 1.1.0 with the MSI, close the program first
 (tray icon menu → **Zakończ** / Exit) — 1.1.0 does not respond to the close request, so the package ends it only
-after a few seconds.
+after a few seconds. After updating to 1.2.0 certificates switch to compatibility mode by themselves on the next
+download; if an application that used to sign stops working, turn compatibility mode off in the panel settings.
 
 ### Verify a release download
 
@@ -380,13 +389,13 @@ report it (see [SECURITY.md](SECURITY.md)).
 Releases are signed with a Craftprojects Sp. z o.o. certificate. Signing through the SignPath Foundation may become
 possible in the future; the release notes will say so. Signing rules (what is signed, who approves releases, privacy): **[CODE_SIGNING_POLICY.md](CODE_SIGNING_POLICY.md)**.
 
-`SignBridge-1.1.1.zip` contains `SignBridge Installer.exe` — check the hash of the ZIP itself, and the signature and
+`SignBridge-1.2.0.zip` contains `SignBridge Installer.exe` — check the hash of the ZIP itself, and the signature and
 thumbprint of the extracted file as above.
 
 ### Build from source (Windows only)
 
 1. Install **Build Tools for Visual Studio 2026** (version 18) with **"Desktop development with C++"**,
-   **"C++ CMake tools for Windows"** and a **Windows SDK** (releases 1.0.0–1.1.1 were built with MSVC 19.51 and
+   **"C++ CMake tools for Windows"** and a **Windows SDK** (releases 1.0.0–1.2.0 were built with MSVC 19.51 and
    Windows SDK 10.0.28000).
 2. *(Optional, for MSI)* install the .NET SDK and WiX 5: `dotnet tool install --global wix --version 5.0.2`.
 3. In the repository folder run `build.cmd` from a regular **CMD** prompt.

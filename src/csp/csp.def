@@ -1,0 +1,27 @@
+LIBRARY cpsignbridge-csp
+EXPORTS
+    CPAcquireContext
+    CPReleaseContext
+    CPGetProvParam
+    CPSetProvParam
+    CPGenRandom
+    CPGetUserKey
+    CPGenKey
+    CPDeriveKey
+    CPDuplicateKey
+    CPDestroyKey
+    CPGetKeyParam
+    CPSetKeyParam
+    CPExportKey
+    CPImportKey
+    CPEncrypt
+    CPDecrypt
+    CPCreateHash
+    CPDuplicateHash
+    CPHashData
+    CPHashSessionKey
+    CPSetHashParam
+    CPGetHashParam
+    CPDestroyHash
+    CPSignHash
+    CPVerifySignature

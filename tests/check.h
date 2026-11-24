@@ -19,9 +19,13 @@ void WriteFileText(const std::wstring& p, const char* text);
 // Junction (mklink /J) — tworzenie nie wymaga administratora
 bool MakeJunction(const std::wstring& link, const std::wstring& target);
 bool NoSkip();
+bool AdminSkipAllowed();
 }  // namespace t
 
 #define TEST(name) static void name(); static t::Reg reg_##name(#name, name); static void name()
 #define CHECK(cond) do { if (!(cond)) { std::printf("  FAIL %s:%d: %s\n", __FILE__, __LINE__, #cond); ++t::g_failures; } } while (0)
 // SB_TESTS_NO_SKIP=1 (CI): pominięcie testu liczy się jako błąd
 #define SKIP(msg) do { std::printf("  SKIP: %s\n", msg); if (t::NoSkip()) ++t::g_failures; return; } while (0)
+// Test wymagający administratora. SB_TESTS_ADMIN_SKIP_OK=1 (runner CI bez praw administratora): pominięcie dozwolone mimo
+// SB_TESTS_NO_SKIP=1 — te testy uruchamia administrator lokalnie przed wydaniem (tests\run-tests.cmd z podwyższonymi prawami)
+#define SKIP_ADMIN() do { std::printf("  SKIP: wymaga administratora\n"); if (t::NoSkip() && !t::AdminSkipAllowed()) ++t::g_failures; return; } while (0)

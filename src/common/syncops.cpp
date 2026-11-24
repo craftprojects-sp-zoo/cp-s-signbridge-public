@@ -62,8 +62,9 @@ void ListSyncedCerts(std::vector<CertRow>& rows) {
     PCCERT_CONTEXT c = NULL;
     while ((c = CertEnumCertificatesInStore(store, c)) != NULL) {
         std::wstring prov;
-        if (!certs::HasPrivateKey(c, &prov, NULL) || _wcsicmp(prov.c_str(), kProviderName) != 0) continue;
-        rows.push_back(RowFrom(c, certs::GetSyncMarker(c, NULL) ? L"serwer (sync)" : L"serwer (sonda)"));
+        if (!certs::HasPrivateKey(c, &prov, NULL) || !keyprov::IsOurProvider(prov)) continue;
+        bool capi = _wcsicmp(prov.c_str(), keyprov::kCspName) == 0;
+        rows.push_back(RowFrom(c, !certs::GetSyncMarker(c, NULL) ? L"serwer (sonda)" : capi ? L"serwer (sync, CAPI)" : L"serwer (sync)"));
     }
     CertCloseStore(store, 0);
 }
@@ -80,6 +81,13 @@ SECURITY_STATUS Sync(std::vector<std::wstring>& log, int& added, int& removed) {
     if (s != ERROR_SUCCESS) { log.push_back(L"Lista certyfikatów: " + err); return s; }
     log.push_back(L"Połączono: " + info);
 
+    // Dostawca dla pobranych certyfikatów: wybór użytkownika (domyślnie CSP — tryb zgodności ze starszymi programami)
+    std::wstring unknown;
+    keyprov::Mode mode = keyprov::ReadMode(&unknown);
+    if (!unknown.empty()) log.push_back(L"~ Nieznane ustawienie dostawcy „" + unknown + L"” — przyjęto tryb zgodności (CAPI); zmiana: Ustawienia.");
+    bool cspOk = mode == keyprov::Mode::Csp && keyprov::IsCspRegistered();
+    if (mode == keyprov::Mode::Csp && !cspOk) log.push_back(L"~ Dostawca CAPI nie jest zainstalowany — certyfikaty przypięte do dostawcy CNG.");
+
     HCERTSTORE store = certs::OpenMyStore();
     if (!store) { log.push_back(L"Nie można otworzyć magazynu Osobiste"); return NTE_FAIL; }
     std::vector<std::wstring> wanted;
@@ -88,14 +96,12 @@ SECURITY_STATUS Sync(std::vector<std::wstring>& log, int& added, int& removed) {
         if (!c) continue;
         std::wstring thumb = certs::Thumbprint(c);
         wanted.push_back(thumb);
-        CRYPT_KEY_PROV_INFO kpi = {};
-        kpi.pwszContainerName = (LPWSTR)thumb.c_str();
-        kpi.pwszProvName = (LPWSTR)kProviderName;
-        CertSetCertificateContextProperty(c, CERT_KEY_PROV_INFO_PROP_ID, 0, &kpi);
+        keyprov::Mode bind = keyprov::Effective(c, mode, cspOk);
+        keyprov::Bind(c, bind);
         certs::SetSyncMarker(c, info);
         PCCERT_CONTEXT stored = NULL;
         if (CertAddCertificateContextToStore(store, c, CERT_STORE_ADD_REPLACE_EXISTING_INHERIT_PROPERTIES, &stored)) {
-            CertSetCertificateContextProperty(stored, CERT_KEY_PROV_INFO_PROP_ID, 0, &kpi);
+            keyprov::Bind(stored, bind);
             certs::SetSyncMarker(stored, info);
             CertFreeCertificateContext(stored);
             log.push_back(L"+ " + certs::SubjectName(c) + L"  (" + thumb.substr(0, 8) + L"…)");
@@ -119,6 +125,20 @@ SECURITY_STATUS Sync(std::vector<std::wstring>& log, int& added, int& removed) {
     return ERROR_SUCCESS;
 }
 
+bool SetKeyProviderMode(keyprov::Mode mode, std::vector<std::wstring>& log) {
+    // najpierw magazyn, potem zapis wyboru: przy błędzie nie zostaje ustawienie, którego nie zastosowano
+    HCERTSTORE store = certs::OpenMyStore();
+    if (!store) { log.push_back(L"Nie można otworzyć magazynu Osobiste"); return false; }
+    if (!keyprov::WriteMode(mode)) { CertCloseStore(store, 0); log.push_back(L"Nie udało się zapisać ustawienia dostawcy."); return false; }
+    bool cspOk = mode == keyprov::Mode::Csp && keyprov::IsCspRegistered();
+    int n = keyprov::Rebind(store, mode, cspOk, &log);
+    CertCloseStore(store, 0);
+    if (mode == keyprov::Mode::Csp && !cspOk) log.push_back(L"Dostawca CAPI nie jest zainstalowany na tym serwerze — certyfikaty zostają przy dostawcy CNG.");
+    log.push_back((mode == keyprov::Mode::Csp ? L"Tryb zgodności ze starszymi programami (CAPI): włączony" : L"Tryb zgodności ze starszymi programami (CAPI): wyłączony")
+                  + std::wstring(L" — przestawiono certyfikatów: ") + std::to_wstring(n));
+    return true;
+}
+
 int Unsync() {
     HCERTSTORE store = certs::OpenMyStore();
     if (!store) return 0;
@@ -128,6 +148,34 @@ int Unsync() {
     for (auto d : toDelete) CertDeleteCertificateFromStore(d);
     CertCloseStore(store, 0);
     return (int)toDelete.size();
+}
+
+// Test podpisu drogą CryptoAPI (CryptCreateHash + HP_HASHVAL + CryptSignHash) — tak podpisuje starszy program.
+// Wynik sprawdzamy kluczem publicznym certyfikatu niezależnie od naszego dostawcy: CAPI oddaje podpis
+// little-endian, więc do weryfikacji w CNG odwracamy bajty.
+static SECURITY_STATUS TestSignCapi(PCCERT_CONTEXT cert, HCRYPTPROV hProv, DWORD spec, const BYTE* hash, DWORD cbHash, std::vector<std::wstring>& log) {
+    HCRYPTHASH hh = 0;
+    if (!CryptCreateHash(hProv, CALG_SHA_256, 0, 0, &hh)) { DWORD e = GetLastError(); log.push_back(L"CryptCreateHash: " + ErrorText((LONG)e)); return (SECURITY_STATUS)e; }
+    SECURITY_STATUS s = ERROR_SUCCESS;
+    BYTE sig[1024]; DWORD cbSig = sizeof(sig);
+    if (!CryptSetHashParam(hh, HP_HASHVAL, hash, 0)) { s = (SECURITY_STATUS)GetLastError(); log.push_back(L"CryptSetHashParam: " + ErrorText(s)); }
+    else {
+        log.push_back(L"Podpisuję przez kanał… (PIN na komputerze użytkownika)");
+        ULONGLONG t0 = GetTickCount64();
+        if (!CryptSignHashW(hh, spec, NULL, 0, sig, &cbSig)) s = (SECURITY_STATUS)GetLastError();
+        wchar_t b[64]; swprintf_s(b, L" (%lu B, %llu ms)", cbSig, GetTickCount64() - t0);
+        log.push_back(L"Podpis: " + ErrorText(s) + (s == ERROR_SUCCESS ? b : L""));
+    }
+    CryptDestroyHash(hh);
+    if (s != ERROR_SUCCESS) return s;
+    for (DWORD i = 0; i < cbSig / 2; ++i) { BYTE t = sig[i]; sig[i] = sig[cbSig - 1 - i]; sig[cbSig - 1 - i] = t; }
+    BCRYPT_KEY_HANDLE pub = NULL; std::wstring alg; DWORD bits = 0;
+    if (!certs::ImportPublicKey(cert, &pub, alg, bits)) { log.push_back(L"Weryfikacja: nie można odczytać klucza publicznego certyfikatu"); return NTE_FAIL; }
+    BCRYPT_PKCS1_PADDING_INFO pad = { BCRYPT_SHA256_ALGORITHM };
+    NTSTATUS v = BCryptVerifySignature(pub, &pad, (PUCHAR)hash, cbHash, sig, cbSig, BCRYPT_PAD_PKCS1);
+    BCryptDestroyKey(pub);
+    log.push_back(L"Weryfikacja: " + ErrorText(v));
+    return BCRYPT_SUCCESS(v) ? ERROR_SUCCESS : NTE_BAD_SIGNATURE;
 }
 
 SECURITY_STATUS TestSign(const std::wstring& thumbprint, std::vector<std::wstring>& log) {
@@ -142,14 +190,24 @@ SECURITY_STATUS TestSign(const std::wstring& thumbprint, std::vector<std::wstrin
     if (!cert) { CertCloseStore(store, 0); log.push_back(L"Brak zsynchronizowanego certyfikatu — najpierw pobierz certyfikaty."); return NTE_NOT_FOUND; }
     log.push_back(L"Certyfikat: " + certs::SubjectName(cert));
 
+    // Certyfikat w trybie zgodności: ta sama droga co starszy program (CryptoAPI); inaczej CNG jak dotąd
+    keyprov::Mode bound = keyprov::Mode::Ksp;
+    bool capi = keyprov::BoundTo(cert, &bound) && bound == keyprov::Mode::Csp;
     HCRYPTPROV_OR_NCRYPT_KEY_HANDLE hk = 0; DWORD spec = 0; BOOL freeIt = FALSE;
-    if (!CryptAcquireCertificatePrivateKey(cert, CRYPT_ACQUIRE_ONLY_NCRYPT_KEY_FLAG, NULL, &hk, &spec, &freeIt)) {
+    if (!CryptAcquireCertificatePrivateKey(cert, capi ? 0 : CRYPT_ACQUIRE_ONLY_NCRYPT_KEY_FLAG, NULL, &hk, &spec, &freeIt)) {
         DWORD e = GetLastError();
         log.push_back(L"Otwarcie klucza: " + ErrorText((LONG)e));
         CertFreeCertificateContext(cert); CertCloseStore(store, 0);
         return (SECURITY_STATUS)e;
     }
     BYTE hash[32]; for (int i = 0; i < 32; ++i) hash[i] = (BYTE)(i * 13 + 7);
+    if (capi) {
+        log.push_back(std::wstring(L"Dostawca: ") + keyprov::kCspName + L" (CAPI)");
+        SECURITY_STATUS cs = TestSignCapi(cert, (HCRYPTPROV)hk, spec, hash, sizeof(hash), log);
+        if (freeIt) CryptReleaseContext((HCRYPTPROV)hk, 0);
+        CertFreeCertificateContext(cert); CertCloseStore(store, 0);
+        return cs;
+    }
     BCRYPT_PKCS1_PADDING_INFO pad = { BCRYPT_SHA256_ALGORITHM };
     BYTE sig[1024]; DWORD cbSig = 0;
     log.push_back(L"Podpisuję przez kanał… (PIN na komputerze użytkownika)");

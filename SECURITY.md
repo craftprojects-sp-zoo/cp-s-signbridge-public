@@ -26,8 +26,8 @@ Prosimy o nieujawnianie szczegółów publicznie, dopóki poprawka nie zostanie 
 
 ## Zakres
 
-W zakresie: dostawca kluczy CNG (`cpsignbridge.dll`), wtyczka mstsc (`cpsignbridge-rdp.dll`), program
-`SignBridge.exe`, instalatory EXE i MSI z oficjalnych wydań oraz skrypty budowania z tego repozytorium.
+W zakresie: dostawca kluczy CNG (`cpsignbridge.dll`), dostawca CryptoAPI (`cpsignbridge-csp.dll`),
+wtyczka mstsc (`cpsignbridge-rdp.dll`), program `SignBridge.exe`, instalatory EXE i MSI z oficjalnych wydań oraz skrypty budowania z tego repozytorium.
 
 Poza zakresem: podatności Windows, klienta RDP, sterowników i aplikacji dostawców kart oraz wersje
 zmodyfikowane przez osoby trzecie.

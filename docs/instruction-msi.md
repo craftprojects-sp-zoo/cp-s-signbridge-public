@@ -79,6 +79,9 @@ oraz odpowiednie `--uninstall-*`.
 
 * `C:\Windows\System32\cpsignbridge.dll`, `C:\Windows\SysWOW64\cpsignbridge.dll` + rejestracja dostawcy CNG
   „SignBridge Key Storage Provider”
+* od 1.2.0: `C:\Windows\System32\cpsignbridge-csp.dll`, `C:\Windows\SysWOW64\cpsignbridge-csp.dll` + rejestracja dostawcy
+  CryptoAPI „SignBridge Cryptographic Provider” (typ 24) dla starszych programów:
+  `HKLM\SOFTWARE\Microsoft\Cryptography\Defaults\Provider\SignBridge Cryptographic Provider` (+ `WOW6432Node`)
 * `C:\Program Files\cp-signbridge\` — `SignBridge.exe`, `cpsignbridge-rdp.dll` (+ `x86\`)
 * `HKLM\Software\Microsoft\Terminal Server Client\Default\AddIns\cpsignbridge` (+ `WOW6432Node`) — wtyczka mstsc
 * `HKLM\…\Run\cp-signbridge-panel` — ikona przy zegarze po zalogowaniu każdego użytkownika

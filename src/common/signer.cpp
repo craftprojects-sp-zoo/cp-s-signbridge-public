@@ -8,6 +8,7 @@
 #include "signer.h"
 #include "certs.h"
 #include "status.h"
+#include "keyprov.h"
 #include "../ksp/log.h"
 
 #pragma comment(lib, "ncrypt.lib")
@@ -16,12 +17,11 @@
 namespace sb { namespace signer {
 namespace {
 
-const wchar_t* const kOurProvider = L"SignBridge Key Storage Provider";
-
 bool Exposable(PCCERT_CONTEXT cert, std::wstring* why) {
     std::wstring prov;
     if (!certs::HasPrivateKey(cert, &prov, NULL)) { if (why) *why = L"brak klucza prywatnego"; return false; }
-    if (_wcsicmp(prov.c_str(), kOurProvider) == 0) { if (why) *why = L"klucz u cp-signbridge (pominięty)"; return false; }
+    // certyfikaty pobrane przez SignBridge (dostawca KSP albo CSP) nie wracają jako „karta”
+    if (keyprov::IsOurProvider(prov)) { if (why) *why = L"klucz u cp-signbridge (pominięty)"; return false; }
     FILETIME now; GetSystemTimeAsFileTime(&now);
     if (CompareFileTime(&cert->pCertInfo->NotAfter, &now) < 0) { if (why) *why = L"wygasł"; return false; }
     return true;

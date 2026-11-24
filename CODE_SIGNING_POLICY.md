@@ -21,7 +21,7 @@
   ([github.com/craftprojects-sp-zoo/cp-signbridge-official](https://github.com/craftprojects-sp-zoo/cp-signbridge-official))
   przez workflow GitHub Actions [`.github/workflows/build.yml`](.github/workflows/build.yml) (`build.cmd`, WiX 5).
 * Podpisywane pliki: instalator `SignBridge Installer.exe` (w wydaniu: `SignBridge.Installer.exe`) z wbudowanymi
-  bibliotekami SignBridge (`cpsignbridge.dll`, `cpsignbridge-rdp.dll`, x64 i x86) oraz pakiet `SignBridge.msi`.
+  bibliotekami SignBridge (`cpsignbridge.dll`, `cpsignbridge-csp.dll`, `cpsignbridge-rdp.dll`, x64 i x86) oraz pakiet `SignBridge.msi`.
 * Nie podpisujemy plików zbudowanych ręcznie, plików osób trzecich ani wersji zmodyfikowanych przez inne osoby.
 * **Każde wydanie jest zatwierdzane ręcznie** przez osobę z roli *Approvers* przed podpisaniem.
 
@@ -76,7 +76,7 @@ Nadużycia certyfikatu lub podejrzane pliki podpisane w imieniu SignBridge zgła
   ([github.com/craftprojects-sp-zoo/cp-signbridge-official](https://github.com/craftprojects-sp-zoo/cp-signbridge-official))
   by the GitHub Actions workflow [`.github/workflows/build.yml`](.github/workflows/build.yml) (`build.cmd`, WiX 5).
 * Signed files: the installer `SignBridge Installer.exe` (release asset: `SignBridge.Installer.exe`) with the embedded
-  SignBridge libraries (`cpsignbridge.dll`, `cpsignbridge-rdp.dll`, x64 and x86) and the `SignBridge.msi` package.
+  SignBridge libraries (`cpsignbridge.dll`, `cpsignbridge-csp.dll`, `cpsignbridge-rdp.dll`, x64 and x86) and the `SignBridge.msi` package.
 * We do not sign manually built files, third-party files or versions modified by others.
 * **Every release is approved manually** by a member of the *Approvers* role before it is signed.
 

@@ -17,7 +17,7 @@ if(MSVC)
 endif()
 
 # Komunikacja serwer <-> komputer z kartą wyłącznie kanałem wirtualnym RDP (dvc.cpp) — bez gniazd sieciowych
-set(COMMON_SRV_SRC  src/common/status.cpp src/common/certs.cpp src/common/dvc.cpp src/common/agentclient.cpp src/common/syncops.cpp)
+set(COMMON_SRV_SRC  src/common/status.cpp src/common/certs.cpp src/common/dvc.cpp src/common/agentclient.cpp src/common/syncops.cpp src/common/keyprov.cpp)
 set(COMMON_SIGN_SRC src/common/signer.cpp src/common/certs.cpp src/common/status.cpp src/ksp/log.cpp)
 set(WIN_LIBS ncrypt bcrypt crypt32 shell32 advapi32 wtsapi32 version ole32 uuid)
 
@@ -38,6 +38,21 @@ if(SB_ENABLE_SOFTKEY)
 endif()
 target_link_libraries(cpsignbridge PRIVATE ${WIN_LIBS})
 set_target_properties(cpsignbridge PROPERTIES OUTPUT_NAME "cpsignbridge" PREFIX "")
+
+# --- CSP (serwer; biblioteka ładowana przez CryptoAPI w starszych programach, np. Symfonia) — x64 i x86 ---
+# Ten sam backend co KSP (src/ksp/backend_*.cpp): podpis idzie tym samym kanałem RDP
+add_library(cpsignbridge-csp SHARED
+  src/csp/csp.cpp
+  src/csp/dllmain.cpp
+  src/csp/csp.def
+  src/ksp/backend_remote.cpp
+  src/ksp/backend_composite.cpp
+  src/ksp/log.cpp
+  ${COMMON_SRV_SRC}
+)
+target_include_directories(cpsignbridge-csp PRIVATE src/csp src/ksp src/common)
+target_link_libraries(cpsignbridge-csp PRIVATE ${WIN_LIBS})
+set_target_properties(cpsignbridge-csp PROPERTIES OUTPUT_NAME "cpsignbridge-csp" PREFIX "")
 
 # --- wtyczka mstsc (komputer użytkownika; kanał RDP) — x64 i x86 ---
 add_library(cpsignbridge-rdp SHARED
@@ -77,7 +92,8 @@ if(CMAKE_SIZEOF_VOID_P EQUAL 8)
   # DLL-e obu architektur wbudowane w sbpanel.exe: build.cmd kopiuje je do build/embed/ przed budowaniem panelu
   set(EMBED_DIR "${CMAKE_SOURCE_DIR}/build/embed")
   set(EMBED_FILES "${EMBED_DIR}/x64-cpsignbridge.dll" "${EMBED_DIR}/x86-cpsignbridge.dll"
-                  "${EMBED_DIR}/x64-cpsignbridge-rdp.dll" "${EMBED_DIR}/x86-cpsignbridge-rdp.dll")
+                  "${EMBED_DIR}/x64-cpsignbridge-rdp.dll" "${EMBED_DIR}/x86-cpsignbridge-rdp.dll"
+                  "${EMBED_DIR}/x64-cpsignbridge-csp.dll" "${EMBED_DIR}/x86-cpsignbridge-csp.dll")
   set_source_files_properties(src/panel/panel.rc PROPERTIES
     COMPILE_OPTIONS "/I${EMBED_DIR}"
     OBJECT_DEPENDS "${EMBED_FILES}")
@@ -91,7 +107,10 @@ if(SB_BUILD_TESTS)
     tests/test_protocol.cpp
     tests/test_kspsetup.cpp
     tests/test_ksp.cpp
+    tests/test_csp.cpp
+    tests/test_keyprov.cpp
     tests/test_update.cpp
+    src/csp/csp.cpp
     src/common/kspsetup.cpp
     src/common/updatecheck.cpp
     src/ksp/backend_composite.cpp
@@ -99,7 +118,9 @@ if(SB_BUILD_TESTS)
     src/ksp/log.cpp
     ${COMMON_SRV_SRC}
   )
-  target_include_directories(sbtests PRIVATE src/common src/ksp src/panel tests)
+  target_include_directories(sbtests PRIVATE src/common src/ksp src/csp src/panel tests)
+  # test rejestracji dostawcy CAPI ładuje prawdziwą bibliotekę przez CryptoAPI — musi leżeć obok sbtests.exe
+  add_dependencies(sbtests cpsignbridge-csp)
   target_link_libraries(sbtests PRIVATE ${WIN_LIBS} winhttp)
   add_test(NAME sbtests COMMAND sbtests)
 endif()

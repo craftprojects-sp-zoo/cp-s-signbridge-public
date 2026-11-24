@@ -15,6 +15,7 @@ std::wstring TempDir(const wchar_t* name) {
     return d;
 }
 bool NoSkip() { wchar_t v[8] = {}; return GetEnvironmentVariableW(L"SB_TESTS_NO_SKIP", v, 8) && v[0] == L'1'; }
+bool AdminSkipAllowed() { wchar_t v[8] = {}; return GetEnvironmentVariableW(L"SB_TESTS_ADMIN_SKIP_OK", v, 8) && v[0] == L'1'; }
 bool Exists(const std::wstring& p) { return GetFileAttributesW(p.c_str()) != INVALID_FILE_ATTRIBUTES; }
 void WriteFileText(const std::wstring& p, const char* text) {
     HANDLE f = CreateFileW(p.c_str(), GENERIC_WRITE, 0, NULL, CREATE_ALWAYS, 0, NULL);
