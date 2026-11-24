@@ -20,7 +20,7 @@
 </p>
 
 <p align="center">
-  <a href="https://github.com/craftprojects-sp-zoo/cp-signbridge-official/releases/latest"><b>Pobierz najnowszą wersję / Download the latest release</b></a>
+  <a href="https://github.com/craftprojects-sp-zoo/cp-s-signbridge-public/releases/latest"><b>Pobierz najnowszą wersję / Download the latest release</b></a>
 </p>
 
 <p align="center">
@@ -88,7 +88,7 @@ Kanał działa w kliencie mstsc na Windows; inne klienty RDP (macOS, aplikacje p
 
 ## Instalacja
 
-**[Pobierz najnowszą wersję](https://github.com/craftprojects-sp-zoo/cp-signbridge-official/releases/latest)**
+**[Pobierz najnowszą wersję](https://github.com/craftprojects-sp-zoo/cp-s-signbridge-public/releases/latest)**
 (wszystkie wydania: zakładka **[Releases](../../releases)**):
 
 | Plik | Zastosowanie |
@@ -227,14 +227,14 @@ w oknie dyskretną informację **„Dostępna wersja X.Y.Z”** z przyciskami **
 (w menu ikony przy zegarze: „Dostępna wersja X.Y.Z — Aktualizuj”). Nic nie jest wymuszane.
 
 * **Program niczego nie pobiera ani nie instaluje.** „Aktualizuj” otwiera w przeglądarce stały adres
-  <https://github.com/craftprojects-sp-zoo/cp-signbridge-official/releases/latest> (nigdy adres z odpowiedzi serwera);
+  <https://github.com/craftprojects-sp-zoo/cp-s-signbridge-public/releases/latest> (nigdy adres z odpowiedzi serwera);
   nowy instalator pobiera i uruchamia użytkownik albo administrator.
 * **Kiedy:** po uruchomieniu panelu (przy autostarcie po zalogowaniu — z losowym opóźnieniem 1–5 min) i potem
   najwyżej raz na 24 godziny na użytkownika; limit czasu 5 s na każdy etap zapytania. Wersje robocze (draft)
   i przedpremierowe (prerelease) są pomijane. „Przypomnij później” ukrywa informację o tej wersji na 7 dni.
 * **Bez internetu** (np. serwer RDS bez dostępu do sieci) nic się nie zmienia: błąd trafia tylko do logu
   (`C:\ProgramData\cp-signbridge\logs`), bez okienek i komunikatów.
-* **Jak:** jedno zapytanie HTTPS GET do `https://api.github.com/repos/craftprojects-sp-zoo/cp-signbridge-official/releases/latest`
+* **Jak:** jedno zapytanie HTTPS GET do `https://api.github.com/repos/craftprojects-sp-zoo/cp-s-signbridge-public/releases/latest`
   przez systemowy WinHTTP (TLS 1.2 lub nowszy, certyfikat serwera sprawdza Windows, ustawienia proxy systemu,
   bez przekierowań, bez logowania i tokenu). Z odpowiedzi odczytywane są tylko pola `tag_name`, `draft` i `prerelease`.
 * Na serwerze z wieloma użytkownikami każdy użytkownik sprawdza osobno (raz na dobę, rozłożone w czasie). GitHub
@@ -350,7 +350,7 @@ The private key never leaves the card and the PIN is never transmitted or stored
 
 ### Install
 
-**[Download the latest release](https://github.com/craftprojects-sp-zoo/cp-signbridge-official/releases/latest)**
+**[Download the latest release](https://github.com/craftprojects-sp-zoo/cp-s-signbridge-public/releases/latest)**
 (all releases: **[Releases](../../releases)**): `SignBridge.Installer.exe`, the ZIP (`SignBridge-1.2.0.zip`, for when
 `.exe` downloads are blocked) or `SignBridge.msi`, plus `Craftprojects-CodeSigning.cer`, the exact build sources
 (`SignBridge-1.2.0-zrodla.zip`) and `SHA256SUMS.txt`. Run the same installer on the server and on user PCs
@@ -417,14 +417,14 @@ Since 1.1.0 the installed SignBridge panel checks whether a newer release exists
 (Remind me later); the tray icon menu shows "Dostępna wersja X.Y.Z — Aktualizuj". Nothing is forced.
 
 * **The program never downloads or installs anything.** "Aktualizuj" opens the fixed address
-  <https://github.com/craftprojects-sp-zoo/cp-signbridge-official/releases/latest> in the browser (never a URL
+  <https://github.com/craftprojects-sp-zoo/cp-s-signbridge-public/releases/latest> in the browser (never a URL
   taken from the server response).
 * **When:** after the panel starts (autostart at logon: random 1–5 min delay), then at most once every 24 hours per
   user; 5 s timeout for each stage of the request. Drafts and pre-releases are ignored. "Remind me later" hides that
   version for 7 days.
 * **Offline** (e.g. an RDS server without internet access) nothing changes: a failed check is only written to the
   log (`C:\ProgramData\cp-signbridge\logs`), with no dialogs.
-* **How:** a single HTTPS GET to `https://api.github.com/repos/craftprojects-sp-zoo/cp-signbridge-official/releases/latest`
+* **How:** a single HTTPS GET to `https://api.github.com/repos/craftprojects-sp-zoo/cp-s-signbridge-public/releases/latest`
   through Windows WinHTTP (TLS 1.2 or newer, server certificate validated by Windows, system proxy settings,
   no redirects, no sign-in or token). Only `tag_name`, `draft` and `prerelease` are read from the response.
 * **Disable (GPO / registry):** enabled by default; set `DisableUpdateCheck` = `1` (REG_DWORD) under

@@ -13,8 +13,8 @@
 namespace sb::update {
 
 const wchar_t* const kApiHost = L"api.github.com";
-const wchar_t* const kApiPath = L"/repos/craftprojects-sp-zoo/cp-signbridge-official/releases/latest";
-const wchar_t* const kReleasePageUrl = L"https://github.com/craftprojects-sp-zoo/cp-signbridge-official/releases/latest";
+const wchar_t* const kApiPath = L"/repos/craftprojects-sp-zoo/cp-s-signbridge-public/releases/latest";
+const wchar_t* const kReleasePageUrl = L"https://github.com/craftprojects-sp-zoo/cp-s-signbridge-public/releases/latest";
 const wchar_t* const kPolicyKey = L"SOFTWARE\\Policies\\Craftprojects\\SignBridge";
 const wchar_t* const kPolicyValue = L"DisableUpdateCheck";
 

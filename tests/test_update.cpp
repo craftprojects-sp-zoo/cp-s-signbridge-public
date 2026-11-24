@@ -14,7 +14,7 @@ Version V(const char* s) { Version v; ParseVersion(std::string(s), v); return v;
 // Skrócona, ale realistyczna odpowiedź GET /repos/{owner}/{repo}/releases/latest
 const char kSample[] =
     "{\r\n"
-    "  \"url\": \"https://api.github.com/repos/craftprojects-sp-zoo/cp-signbridge-official/releases/1\",\n"
+    "  \"url\": \"https://api.github.com/repos/craftprojects-sp-zoo/cp-s-signbridge-public/releases/1\",\n"
     "  \"html_url\": \"https://evil.example/pobierz.exe\",\n"
     "  \"id\": 123456789,\n"
     "  \"author\": { \"login\": \"x\", \"id\": 1, \"site_admin\": false, \"type\": \"User\" },\n"
@@ -162,7 +162,7 @@ TEST(update_parse_fuzz_truncated_and_mutated) {
 }
 
 TEST(update_button_url_is_fixed) {
-    const wchar_t* expected = L"https://github.com/craftprojects-sp-zoo/cp-signbridge-official/releases/latest";
+    const wchar_t* expected = L"https://github.com/craftprojects-sp-zoo/cp-s-signbridge-public/releases/latest";
     CHECK(wcscmp(UpdateButtonUrl(), expected) == 0);
     CHECK(UpdateButtonUrl() == kReleasePageUrl);
     // odpowiedź z innymi adresami (html_url, browser_download_url) nie zmienia adresu przycisku
@@ -170,7 +170,7 @@ TEST(update_button_url_is_fixed) {
     CHECK(Parse(kSample, r));
     CHECK(wcscmp(UpdateButtonUrl(), expected) == 0);
     CHECK(wcscmp(kApiHost, L"api.github.com") == 0);
-    CHECK(wcscmp(kApiPath, L"/repos/craftprojects-sp-zoo/cp-signbridge-official/releases/latest") == 0);
+    CHECK(wcscmp(kApiPath, L"/repos/craftprojects-sp-zoo/cp-s-signbridge-public/releases/latest") == 0);
 }
 
 TEST(update_installer_closes_running_app) {

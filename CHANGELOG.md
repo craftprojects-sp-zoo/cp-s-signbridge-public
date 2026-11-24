@@ -20,7 +20,19 @@ Tryb zgodności ze starszymi programami (CryptoAPI). / *Compatibility mode for o
   (CAPI)" (compatibility mode): each server user turns it on or off for their own account, without an administrator.
   On by default.*
 
+### Poprawiono / Fixed
+
+* Powiadomienie o nowej wersji znowu działa. Repozytorium z wydaniami zmieniło nazwę na `cp-s-signbridge-public`,
+  a program pytał pod starym adresem i nie dostawał odpowiedzi. Przycisk „Aktualizuj” prowadzi teraz wprost na nowy
+  adres. / *The new version notification works again. The releases repository was renamed to
+  `cp-s-signbridge-public`, while the program kept asking the old address and got no answer. The "Aktualizuj"
+  (Update) button now opens the new address directly.*
+
 ### Aktualizacja z 1.1.1 / Updating from 1.1.1
+
+* Wersje 1.1.0 i 1.1.1 o tym wydaniu same nie powiadomią — 1.2.0 trzeba zainstalować samodzielnie (pobrać ze strony
+  wydań). / *Versions 1.1.0 and 1.1.1 will not notify about this release by themselves — install 1.2.0 manually
+  (download it from the releases page).*
 
 * Po aktualizacji certyfikaty przechodzą w tryb zgodności same, przy najbliższym pobraniu (logowanie, ponowne
   połączenie albo „Pobierz certyfikaty teraz”). / *After the update certificates switch to compatibility mode by

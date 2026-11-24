@@ -19,8 +19,8 @@ namespace sb::update {
 
 // Stałe adresy (testy sprawdzają, że są dokładnie takie)
 extern const wchar_t* const kApiHost;          // api.github.com
-extern const wchar_t* const kApiPath;          // /repos/craftprojects-sp-zoo/cp-signbridge-official/releases/latest
-extern const wchar_t* const kReleasePageUrl;   // https://github.com/craftprojects-sp-zoo/cp-signbridge-official/releases/latest
+extern const wchar_t* const kApiPath;          // /repos/craftprojects-sp-zoo/cp-s-signbridge-public/releases/latest
+extern const wchar_t* const kReleasePageUrl;   // https://github.com/craftprojects-sp-zoo/cp-s-signbridge-public/releases/latest
 
 // Polityka (GPO)
 extern const wchar_t* const kPolicyKey;        // SOFTWARE\Policies\Craftprojects\SignBridge
